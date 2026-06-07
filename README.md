@@ -209,6 +209,17 @@ pip install -r requirements.txt
 
 注意需要到 MoneyPrinterTurbo 项目 `根目录` 下执行以下命令
 
+###### React + Vite（推荐）
+
+```shell
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+默认 Vite 地址为 `http://127.0.0.1:5173`，后端 API 地址为 `http://127.0.0.1:8080`。
+
 ###### Windows
 
 ```powershell

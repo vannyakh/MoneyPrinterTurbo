@@ -203,6 +203,17 @@ Notes:
 
 Note that you need to execute the following commands in the `root directory` of the MoneyPrinterTurbo project
 
+###### React + Vite (recommended)
+
+```shell
+cd frontend
+npm install
+cp .env.example .env
+npm run dev
+```
+
+By default, Vite runs at `http://127.0.0.1:5173` and talks to backend API `http://127.0.0.1:8080`.
+
 ###### Windows
 
 ```powershell
