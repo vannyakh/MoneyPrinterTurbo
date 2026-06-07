@@ -5,7 +5,7 @@ type PageShellProps = PropsWithChildren<{
   maxW?: string
 }>
 
-export function PageShell({ children, maxW = '5xl' }: PageShellProps) {
+export function PageShell({ children, maxW = '7xl' }: PageShellProps) {
   return (
     <Box flex={1} overflowY="auto" py={8} px={6} bg="bg.canvas">
       <Container maxW={maxW}>

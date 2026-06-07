@@ -2,16 +2,73 @@ import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react'
 
 const config = defineConfig({
   theme: {
-    tokens: {
-      radii: {
-        card:   { value: '20px' },
-        btn:    { value: '12px' },
-        input:  { value: '12px' },
-        badge:  { value: '8px' },
-        nav:    { value: '14px' },
-        logo:   { value: '14px' },
+    // ── Custom keyframes ──────────────────────────────────────────────────────
+    keyframes: {
+      fadeSlideUp: {
+        from: { opacity: '0', transform: 'translateY(12px)' },
+        to:   { opacity: '1', transform: 'translateY(0)' },
+      },
+      pulseDot: {
+        '0%, 100%': { opacity: '1' },
+        '50%':       { opacity: '0.4' },
       },
     },
+
+    // ── Design tokens ─────────────────────────────────────────────────────────
+    tokens: {
+      radii: {
+        card:  { value: '20px' },
+        btn:   { value: '12px' },
+        input: { value: '12px' },
+        badge: { value: '8px' },
+        nav:   { value: '14px' },
+        logo:  { value: '14px' },
+      },
+      fonts: {
+        body:    { value: "'Inter', system-ui, -apple-system, sans-serif" },
+        heading: { value: "'Inter', system-ui, -apple-system, sans-serif" },
+        mono:    { value: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace" },
+      },
+    },
+
+    // ── Text styles ───────────────────────────────────────────────────────────
+    textStyles: {
+      'page.title': {
+        value: {
+          fontSize: '1.5rem',
+          fontWeight: '800',
+          lineHeight: '1.25',
+          letterSpacing: '-0.025em',
+          color: '{colors.text.primary}',
+        },
+      },
+      'section.title': {
+        value: {
+          fontSize: '1rem',
+          fontWeight: '700',
+          lineHeight: '1.3',
+          color: '{colors.text.primary}',
+        },
+      },
+      'label': {
+        value: {
+          fontSize: '0.875rem',
+          fontWeight: '700',
+          lineHeight: '1.4',
+          color: '{colors.text.primary}',
+        },
+      },
+      'body.sm': {
+        value: {
+          fontSize: '0.875rem',
+          fontWeight: '500',
+          lineHeight: '1.6',
+          color: '{colors.text.secondary}',
+        },
+      },
+    },
+
+    // ── Semantic color tokens ─────────────────────────────────────────────────
     semanticTokens: {
       colors: {
         bg: {
@@ -25,9 +82,9 @@ const config = defineConfig({
           active:  { value: { _light: 'rgba(59,130,246,0.14)', _dark: 'rgba(59,130,246,0.18)' } },
         },
         border: {
-          default: { value: { _light: 'rgba(0,0,0,0.09)',      _dark: 'rgba(148,163,184,0.14)' } },
-          strong:  { value: { _light: 'rgba(0,0,0,0.18)',      _dark: 'rgba(148,163,184,0.28)' } },
-          error:   { value: { _light: 'rgba(239,68,68,0.5)',   _dark: 'rgba(248,113,113,0.5)' } },
+          default: { value: { _light: 'rgba(0,0,0,0.09)',    _dark: 'rgba(148,163,184,0.14)' } },
+          strong:  { value: { _light: 'rgba(0,0,0,0.18)',    _dark: 'rgba(148,163,184,0.28)' } },
+          error:   { value: { _light: 'rgba(239,68,68,0.5)', _dark: 'rgba(248,113,113,0.5)' } },
         },
         text: {
           primary:   { value: { _light: '#0f172a', _dark: '#f1f5f9' } },
@@ -51,14 +108,34 @@ const config = defineConfig({
           600: { value: { _light: '#2563eb', _dark: '#93c5fd' } },
         },
       },
+
+      // ── Animation style tokens ─────────────────────────────────────────────
+      animations: {
+        'fade-slide-up': {
+          value: 'fadeSlideUp 0.25s ease-out both',
+        },
+        'pulse-dot': {
+          value: 'pulseDot 1.8s ease-in-out infinite',
+        },
+      },
     },
   },
+
+  // ── Global CSS ───────────────────────────────────────────────────────────────
   globalCss: {
     body: {
       bg: 'bg.canvas',
       color: 'text.primary',
       fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
       fontWeight: '400',
+    },
+    '::selection': {
+      bg: 'blue.200',
+      color: 'blue.900',
+    },
+    ':focus-visible': {
+      outlineColor: 'blue.500',
+      outlineOffset: '2px',
     },
   },
 })

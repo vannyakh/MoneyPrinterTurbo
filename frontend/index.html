@@ -4,18 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>MoneyPrinterTurbo Web UI</title>
-    <!-- Prevent color-mode flash by setting data-theme before React renders -->
+    <!-- Prevent color-mode flash: apply .dark class before React + next-themes hydrate -->
     <script>
       (function () {
         try {
-          var raw = localStorage.getItem('mpt-color-mode')
-          var mode = raw ? JSON.parse(raw).state?.colorMode : null
-          if (mode !== 'light' && mode !== 'dark') {
-            mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+          var theme = localStorage.getItem('theme')
+          if (theme !== 'light' && theme !== 'dark') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
           }
-          document.documentElement.setAttribute('data-theme', mode)
+          if (theme === 'dark') document.documentElement.classList.add('dark')
         } catch (_) {
-          document.documentElement.setAttribute('data-theme', 'dark')
+          document.documentElement.classList.add('dark')
         }
       })()
     </script>
