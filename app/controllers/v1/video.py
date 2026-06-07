@@ -27,6 +27,7 @@ from app.models.schema import (
     TaskResponse,
     TaskVideoRequest,
     VideoMaterialUploadResponse,
+    VideoMaterialDeleteResponse,
     VideoMaterialRetrieveResponse
 )
 from app.services import state as sm
@@ -87,6 +88,40 @@ def _resolve_path_within_directory(base_dir: str, unsafe_path: str, request_id: 
             message=f"{request_id}: invalid file path",
         )
 
+def _get_public_endpoint(request: Request) -> str:
+    configured = (config.app.get("endpoint") or "").strip().rstrip("/")
+    if configured:
+        return configured
+    base_url = getattr(request, "base_url", None)
+    if base_url is not None:
+        return str(base_url).rstrip("/")
+    return ""
+
+
+def _task_relative_path(file: str, task_dir: str, request_id: str) -> str | None:
+    task_dir_real = os.path.realpath(task_dir)
+    try:
+        resolved_path = file_security.resolve_path_within_directory(
+            task_dir,
+            file,
+            require_file=False,
+        )
+        return os.path.relpath(resolved_path, task_dir_real).replace("\\", "/")
+    except ValueError as exc:
+        normalized = file.replace("\\", "/")
+        marker = "/tasks/"
+        idx = normalized.find(marker)
+        if idx >= 0:
+            return normalized[idx + len(marker) :].lstrip("/")
+        if normalized.startswith("tasks/"):
+            return normalized[len("tasks/") :].lstrip("/")
+        logger.warning(
+            f"skip unsafe task output path, request_id: {request_id}, path: {file}, "
+            f"error: {str(exc)}"
+        )
+        return None
+
+
 def _task_file_to_uri(file: str, endpoint: str, task_dir: str, request_id: str) -> str:
     if not isinstance(file, str):
         return file
@@ -94,22 +129,52 @@ def _task_file_to_uri(file: str, endpoint: str, task_dir: str, request_id: str) 
     if file.startswith(("http://", "https://")):
         return file
 
-    try:
-        resolved_path = file_security.resolve_path_within_directory(task_dir, file)
-    except ValueError as exc:
-        # 任务状态理论上只应保存任务目录内的产物路径。这里不再继续拼接 URL，
-        # 避免把异常路径包装成可访问链接；同时保留原值，便于排查历史脏数据。
-        logger.warning(
-            f"skip unsafe task output path, request_id: {request_id}, path: {file}, "
-            f"error: {str(exc)}"
-        )
+    relative_path = _task_relative_path(file, task_dir, request_id)
+    if not relative_path:
         return file
 
-    relative_path = os.path.relpath(resolved_path, task_dir).replace("\\", "/")
-    uri_path = f"tasks/{relative_path}"
+    uri_path = f"tasks/{relative_path.lstrip('/')}"
     if endpoint:
         return f"{endpoint.rstrip('/')}/{uri_path}"
     return f"/{uri_path}"
+
+
+def _serialize_task_response(task: dict, request: Request) -> dict:
+    request_id = base.get_task_id(request)
+    endpoint = _get_public_endpoint(request)
+    task_dir = utils.task_dir()
+    response_task = dict(task)
+
+    for field in ("videos", "combined_videos"):
+        if field in response_task and isinstance(response_task[field], list):
+            response_task[field] = [
+                _task_file_to_uri(v, endpoint, task_dir, request_id)
+                for v in response_task[field]
+            ]
+
+    if isinstance(response_task.get("materials"), list):
+        serialized_materials = []
+        for item in response_task["materials"]:
+            if isinstance(item, str):
+                serialized_materials.append(
+                    _task_file_to_uri(item, endpoint, task_dir, request_id)
+                )
+            elif isinstance(item, dict) and item.get("url"):
+                serialized_item = dict(item)
+                serialized_item["url"] = _task_file_to_uri(
+                    item["url"], endpoint, task_dir, request_id
+                )
+                serialized_materials.append(serialized_item)
+            else:
+                serialized_materials.append(item)
+        response_task["materials"] = serialized_materials
+
+    if isinstance(response_task.get("audio_file"), str):
+        response_task["audio_file"] = _task_file_to_uri(
+            response_task["audio_file"], endpoint, task_dir, request_id
+        )
+
+    return response_task
 
 
 @router.post("/videos", response_model=TaskResponse, summary="Generate a short video")
@@ -146,7 +211,7 @@ def create_task(
             "request_id": request_id,
             "params": body.model_dump(),
         }
-        sm.state.update_task(task_id)
+        sm.state.update_task(task_id, progress=0, stage="queued")
         task_manager.add_task(tm.start, task_id=task_id, params=body, stop_at=stop_at)
         logger.success(f"Task created: {utils.to_json(task)}")
         return utils.get_response(200, task)
@@ -168,7 +233,7 @@ def get_all_tasks(request: Request, page: int = Query(1, ge=1), page_size: int =
     tasks, total = sm.state.get_all_tasks(page, page_size)
 
     response = {
-        "tasks": tasks,
+        "tasks": [_serialize_task_response(task, request) for task in tasks],
         "total": total,
         "page": page,
         "page_size": page_size,
@@ -186,23 +251,9 @@ def get_task(
     query: TaskQueryRequest = Depends(),
 ):
     request_id = base.get_task_id(request)
-    endpoint = config.app.get("endpoint", "").rstrip("/")
     task = sm.state.get_task(task_id)
     if task:
-        task_dir = utils.task_dir()
-        response_task = dict(task)
-
-        if "videos" in task:
-            response_task["videos"] = [
-                _task_file_to_uri(v, endpoint, task_dir, request_id)
-                for v in task["videos"]
-            ]
-        if "combined_videos" in task:
-            response_task["combined_videos"] = [
-                _task_file_to_uri(v, endpoint, task_dir, request_id)
-                for v in task["combined_videos"]
-            ]
-        return utils.get_response(200, response_task)
+        return utils.get_response(200, _serialize_task_response(task, request))
 
     raise HttpException(
         task_id=task_id, status_code=404, message=f"{request_id}: task not found"
@@ -333,6 +384,41 @@ def upload_video_material_file(request: Request, file: UploadFile = File(...)):
     raise HttpException(
         "", status_code=400, message=f"{request_id}: Only files with extensions {', '.join(allowed_suffixes)} can be uploaded"
     )
+
+
+@router.delete(
+    "/video_materials",
+    response_model=VideoMaterialDeleteResponse,
+    summary="Delete a local video material file",
+)
+def delete_video_material_file(
+    request: Request,
+    file: str = Query(..., description="Material filename"),
+):
+    request_id = base.get_task_id(request)
+    safe_filename = _sanitize_upload_filename(file, request_id)
+    local_videos_dir = utils.storage_dir("local_videos", create=False)
+    material_path = _resolve_path_within_directory(
+        local_videos_dir,
+        safe_filename,
+        request_id,
+    )
+
+    try:
+        os.remove(material_path)
+    except OSError as exc:
+        logger.warning(
+            f"failed to delete video material, request_id: {request_id}, "
+            f"file: {safe_filename}, error: {str(exc)}"
+        )
+        raise HttpException(
+            "",
+            status_code=500,
+            message=f"{request_id}: failed to delete video material",
+        )
+
+    logger.success(f"video material deleted: {safe_filename}")
+    return utils.get_response(200, {"file": safe_filename})
 
 @router.get("/stream/{file_path:path}")
 async def stream_video(request: Request, file_path: str):

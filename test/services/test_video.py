@@ -28,8 +28,12 @@ resources_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "resour
 
 
 class _FakeRequest:
-    def __init__(self):
+    def __init__(self, base_url: str = ""):
         self.headers = {"x-task-id": "test-request"}
+        if base_url:
+            from starlette.datastructures import URL
+
+            self.base_url = URL(base_url)
 
 
 class TestSecurityControls(unittest.TestCase):
@@ -67,6 +71,58 @@ class TestSecurityControls(unittest.TestCase):
             sm.state.delete_task(task_id)
             shutil.rmtree(task_dir, ignore_errors=True)
 
+    def test_get_all_tasks_returns_public_video_urls(self):
+        task_id = "list-task-url"
+        task_dir = utils.task_dir(task_id)
+        video_path = os.path.join(task_dir, "final-1.mp4")
+        Path(video_path).write_bytes(b"fake-video")
+        config.app["endpoint"] = "http://127.0.0.1:8080"
+
+        try:
+            sm.state.update_task(
+                task_id,
+                state=const.TASK_STATE_COMPLETE,
+                videos=[video_path],
+            )
+
+            response = video_controller.get_all_tasks(_FakeRequest(), page=1, page_size=10)
+
+            self.assertEqual(
+                response["data"]["tasks"][0]["videos"],
+                [f"http://127.0.0.1:8080/tasks/{task_id}/final-1.mp4"],
+            )
+            self.assertEqual(sm.state.get_task(task_id)["videos"], [video_path])
+        finally:
+            sm.state.delete_task(task_id)
+            shutil.rmtree(task_dir, ignore_errors=True)
+
+    def test_task_query_converts_absolute_storage_path_to_public_url(self):
+        task_id = "absolute-task-url"
+        task_dir = utils.task_dir(task_id)
+        video_path = os.path.join(task_dir, "final-1.mp4")
+        Path(video_path).write_bytes(b"fake-video")
+        config.app["endpoint"] = "http://127.0.0.1:8080"
+
+        try:
+            sm.state.update_task(
+                task_id,
+                state=const.TASK_STATE_COMPLETE,
+                videos=[video_path],
+            )
+
+            response = video_controller.get_task(
+                _FakeRequest(base_url="http://127.0.0.1:8080"),
+                task_id=task_id,
+            )
+
+            self.assertEqual(
+                response["data"]["videos"],
+                [f"http://127.0.0.1:8080/tasks/{task_id}/final-1.mp4"],
+            )
+        finally:
+            sm.state.delete_task(task_id)
+            shutil.rmtree(task_dir, ignore_errors=True)
+
     def test_in_memory_task_manager_rejects_when_queue_is_full(self):
         """
         并发数用尽后，等待队列必须有硬上限。这里用 max_concurrent_tasks=0
@@ -78,6 +134,35 @@ class TestSecurityControls(unittest.TestCase):
 
         with self.assertRaises(TaskQueueFullError):
             manager.add_task(lambda: None)
+
+    def test_delete_video_material_removes_file(self):
+        local_videos_dir = utils.storage_dir("local_videos", create=True)
+        material_path = os.path.join(local_videos_dir, "delete-me.mp4")
+        Path(material_path).write_bytes(b"fake-video")
+
+        response = video_controller.delete_video_material_file(
+            _FakeRequest(),
+            file="delete-me.mp4",
+        )
+
+        self.assertEqual(response["data"]["file"], "delete-me.mp4")
+        self.assertFalse(os.path.exists(material_path))
+
+    def test_delete_video_material_rejects_missing_file(self):
+        with self.assertRaises(Exception) as ctx:
+            video_controller.delete_video_material_file(
+                _FakeRequest(),
+                file="missing.mp4",
+            )
+        self.assertEqual(ctx.exception.status_code, 404)
+
+    def test_delete_video_material_rejects_path_traversal(self):
+        with self.assertRaises(Exception) as ctx:
+            video_controller.delete_video_material_file(
+                _FakeRequest(),
+                file="../config.toml",
+            )
+        self.assertIn(ctx.exception.status_code, (403, 404))
 
 class TestVideoService(unittest.TestCase):
     def setUp(self):

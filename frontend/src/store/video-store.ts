@@ -21,8 +21,11 @@ export type VideoState = {
   videoTransitionMode: string   // '' | Shuffle | FadeIn | FadeOut | SlideIn | SlideOut
   videoClipDuration:   number   // 2-10
   videoCount:          number   // 1-5
+  videoMaterials:      { provider: string; url: string; duration: number }[]
+  uploadedMaterialNames: string[]
 
   // ── Audio ────────────────────────────────────────────────────────────────────
+  ttsServer:   string   // no-voice | azure-tts-v1 | azure-tts-v2 | siliconflow | gemini-tts | mimo-tts
   voiceName:   string
   voiceVolume: number
   voiceRate:   number
@@ -76,10 +79,13 @@ export const useVideoStore = create<VideoState>((set) => ({
   videoAspect:         '9:16',
   videoConcatMode:     'random',
   videoTransitionMode: '',
-  videoClipDuration:   5,
+  videoClipDuration:   3,
   videoCount:          1,
+  videoMaterials:      [],
+  uploadedMaterialNames: [],
 
   // Audio
+  ttsServer:   'azure-tts-v1',
   voiceName:   '',
   voiceVolume: 1.0,
   voiceRate:   1.0,

@@ -139,6 +139,60 @@ def get_mimo_voices() -> list[str]:
     return [f"mimo:{voice}-{gender}" for voice, gender in voices_with_gender]
 
 
+TTS_SERVERS: list[tuple[str, str]] = [
+    (NO_VOICE_NAME, "No Voice"),
+    ("azure-tts-v1", "Azure TTS V1"),
+    ("azure-tts-v2", "Azure TTS V2"),
+    ("siliconflow", "SiliconFlow TTS"),
+    ("gemini-tts", "Google Gemini TTS"),
+    ("mimo-tts", "Xiaomi MiMo TTS"),
+]
+
+
+def get_tts_server_options() -> list[dict[str, str]]:
+    return [{"id": server_id, "label": label} for server_id, label in TTS_SERVERS]
+
+
+def get_voices_for_tts_server(tts_server: str) -> list[str]:
+    if tts_server == NO_VOICE_NAME:
+        return [NO_VOICE_NAME]
+    if tts_server == "siliconflow":
+        return get_siliconflow_voices()
+    if tts_server == "gemini-tts":
+        return get_gemini_voices()
+    if tts_server == "mimo-tts":
+        return get_mimo_voices()
+
+    all_voices = get_all_azure_voices(filter_locals=None)
+    if tts_server == "azure-tts-v2":
+        return [v for v in all_voices if "V2" in v]
+    return [v for v in all_voices if "V2" not in v]
+
+
+def format_voice_label(voice_id: str) -> str:
+    if voice_id == NO_VOICE_NAME:
+        return "No Voice"
+    return (
+        voice_id.replace("Female", "Female")
+        .replace("Male", "Male")
+        .replace("Neural", "")
+        .strip()
+    )
+
+
+def pick_default_voice_name(
+    voices: list[str], locale: str = "", current_voice: str = ""
+) -> str:
+    if current_voice and current_voice in voices:
+        return current_voice
+    if locale:
+        locale_prefix = locale.lower().split("-")[0]
+        for voice_id in voices:
+            if voice_id.lower().startswith(locale_prefix):
+                return voice_id
+    return voices[0] if voices else ""
+
+
 _AZURE_VOICES_DATA_FILE = os.path.join(
     os.path.dirname(__file__), "data", "azure_voices.json"
 )

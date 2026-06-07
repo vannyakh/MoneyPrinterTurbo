@@ -1,4 +1,38 @@
-import { createSystem, defaultConfig, defineConfig } from '@chakra-ui/react'
+import { createSystem, defaultConfig, defineConfig, defineSlotRecipe } from '@chakra-ui/react'
+import {
+  comboboxAnatomy,
+  nativeSelectAnatomy,
+  numberInputAnatomy,
+  selectAnatomy,
+} from '@chakra-ui/react/anatomy'
+
+const selectFocusRecipe = defineSlotRecipe({
+  slots: selectAnatomy.keys(),
+  base: {
+    trigger: { focusVisibleRing: 'none' },
+  },
+})
+
+const nativeSelectFocusRecipe = defineSlotRecipe({
+  slots: nativeSelectAnatomy.keys(),
+  base: {
+    field: { focusVisibleRing: 'none' },
+  },
+})
+
+const numberInputFocusRecipe = defineSlotRecipe({
+  slots: numberInputAnatomy.keys(),
+  base: {
+    input: { focusVisibleRing: 'none' },
+  },
+})
+
+const comboboxFocusRecipe = defineSlotRecipe({
+  slots: comboboxAnatomy.keys(),
+  base: {
+    input: { focusVisibleRing: 'none' },
+  },
+})
 
 const config = defineConfig({
   theme: {
@@ -119,6 +153,36 @@ const config = defineConfig({
         },
       },
     },
+
+    // ── Recipe overrides — remove default Chakra focus rings on form fields ───
+    recipes: {
+      input: {
+        base: {
+          focusVisibleRing: 'none',
+        },
+        variants: {
+          variant: {
+            outline: {
+              focusVisibleRing: 'none',
+            },
+            subtle: {
+              focusVisibleRing: 'none',
+            },
+            flushed: {
+              _focusVisible: {
+                boxShadow: 'none',
+              },
+            },
+          },
+        },
+      },
+    },
+    slotRecipes: {
+      select: selectFocusRecipe,
+      nativeSelect: nativeSelectFocusRecipe,
+      numberInput: numberInputFocusRecipe,
+      combobox: comboboxFocusRecipe,
+    },
   },
 
   // ── Global CSS ───────────────────────────────────────────────────────────────
@@ -133,10 +197,11 @@ const config = defineConfig({
       bg: 'blue.200',
       color: 'blue.900',
     },
-    ':focus-visible': {
-      outlineColor: 'blue.500',
-      outlineOffset: '2px',
-    },
+    'input:focus, input:focus-visible, textarea:focus, textarea:focus-visible, select:focus, select:focus-visible':
+      {
+        outline: 'none',
+        boxShadow: 'none',
+      },
   },
 })
 

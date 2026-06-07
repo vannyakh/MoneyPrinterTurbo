@@ -225,7 +225,7 @@ def generate_final_videos(
         )
 
         _progress += 50 / params.video_count / 2
-        sm.state.update_task(task_id, progress=_progress)
+        sm.state.update_task(task_id, progress=_progress, stage="compositing")
 
         final_video_path = path.join(utils.task_dir(task_id), f"final-{index}.mp4")
 
@@ -239,7 +239,7 @@ def generate_final_videos(
         )
 
         _progress += 50 / params.video_count / 2
-        sm.state.update_task(task_id, progress=_progress)
+        sm.state.update_task(task_id, progress=_progress, stage="encoding")
 
         final_video_paths.append(final_video_path)
         combined_video_paths.append(combined_video_path)
@@ -249,15 +249,15 @@ def generate_final_videos(
 
 def start(task_id, params: VideoParams, stop_at: str = "video"):
     logger.info(f"start task: {task_id}, stop_at: {stop_at}")
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5, stage="initializing")
 
     # 1. Generate script
     video_script = generate_script(task_id, params)
     if not video_script or "Error: " in video_script:
-        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED, stage="failed")
         return
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=10)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=10, stage="script")
 
     if stop_at == "script":
         sm.state.update_task(
@@ -281,7 +281,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"script": video_script, "terms": video_terms}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=20)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=20, stage="audio")
 
     # 3. Generate audio
     audio_file, audio_duration, sub_maker = generate_audio(
@@ -291,7 +291,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
         return
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=30)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=30, stage="subtitles")
 
     if stop_at == "audio":
         sm.state.update_task(
@@ -316,7 +316,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"subtitle_path": subtitle_path}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=40)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=40, stage="materials")
 
     # 5. Get video materials
     downloaded_videos = get_video_materials(
@@ -335,7 +335,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"materials": downloaded_videos}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=50)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=50, stage="compositing")
 
     # 仅完整视频生成流程才需要处理视频拼接模式；
     # 这样可以避免 /subtitle 和 /audio 这类请求访问不存在的字段。
@@ -382,7 +382,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         "cross_post_results": cross_post_results if cross_post_results else None,
     }
     sm.state.update_task(
-        task_id, state=const.TASK_STATE_COMPLETE, progress=100, **kwargs
+        task_id, state=const.TASK_STATE_COMPLETE, progress=100, stage="complete", **kwargs
     )
     return kwargs
 

@@ -20,6 +20,7 @@ import { useColorMode } from './color-mode'
 import { useSettingsStore } from '../../store/settings-store'
 import { useVideoStore } from '../../store/video-store'
 import { Tooltip } from './tooltip'
+import { fieldTriggerStyle, inputStyle } from '../../lib/field-styles'
 
 type SectionId = 'general' | 'appearance' | 'llm' | 'video'
 
@@ -53,21 +54,6 @@ const dialogSelectProps = {
   size: 'md' as const,
   width: 'full' as const,
 }
-
-const triggerStyle = {
-  borderRadius: 'input',
-  borderColor: 'border.default',
-  bg: 'bg.subtle',
-  fontWeight: '500' as const,
-}
-
-const inputStyle = {
-  borderRadius: 'input',
-  borderColor: 'border.default',
-  bg: 'bg.subtle',
-  fontWeight: '500',
-  _focus: { borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' },
-} as const
 
 const fieldLabel = { fontWeight: '700', color: 'text.primary', fontSize: 'sm' } as const
 
@@ -247,7 +233,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           >
                             <Select.HiddenSelect />
                             <Select.Control>
-                              <Select.Trigger {...triggerStyle}>
+                              <Select.Trigger {...fieldTriggerStyle}>
                                 <Select.ValueText />
                               </Select.Trigger>
                               <Select.IndicatorGroup>
@@ -285,7 +271,7 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
                           >
                             <Select.HiddenSelect />
                             <Select.Control>
-                              <Select.Trigger {...triggerStyle}>
+                              <Select.Trigger {...fieldTriggerStyle}>
                                 <Select.ValueText placeholder="Select a provider…" />
                               </Select.Trigger>
                               <Select.IndicatorGroup>

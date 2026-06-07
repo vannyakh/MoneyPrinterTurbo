@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { getApi, postApi } from '../lib/api'
+import { deleteApi, getApi } from '../lib/api'
+import { isTaskActive } from '../lib/task-status'
 import type { ApiResponse } from '../types/api'
 import type { Task, TaskListData } from '../types/task'
 
@@ -23,7 +24,11 @@ export function useTask(taskId: string) {
     queryFn: () => getApi<ApiResponse<Task>>(`/api/v1/tasks/${taskId}`),
     select: (res) => res.data,
     enabled: Boolean(taskId),
-    refetchInterval: 3000,
+    refetchInterval: (query) => {
+      const task = query.state.data?.data
+      if (!task) return 2000
+      return isTaskActive(task.state) ? 1500 : false
+    },
   })
 }
 
@@ -31,7 +36,7 @@ export function useDeleteTask() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (taskId: string) =>
-      postApi(`/api/v1/tasks/${taskId}`, {}),
+      deleteApi(`/api/v1/tasks/${taskId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: TASKS_KEY })
     },

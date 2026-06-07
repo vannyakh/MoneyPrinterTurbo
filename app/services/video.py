@@ -77,6 +77,14 @@ _SUPPORTED_VIDEO_CODECS = (
     "h264_mf",
     "h264_videotoolbox",
 )
+_VIDEO_CODEC_LABELS = {
+    "libx264": "libx264 (CPU)",
+    "h264_nvenc": "NVIDIA NVENC (h264_nvenc)",
+    "h264_amf": "AMD AMF (h264_amf)",
+    "h264_qsv": "Intel QSV (h264_qsv)",
+    "h264_mf": "Windows MediaFoundation (h264_mf)",
+    "h264_videotoolbox": "macOS VideoToolbox (h264_videotoolbox)",
+}
 _runtime_disabled_video_codecs = set()
 
 
@@ -134,6 +142,20 @@ def get_ffmpeg_binary():
     return utils.get_ffmpeg_binary()
 
 
+def normalize_configured_video_codec(codec: str | None) -> str:
+    configured_codec = str(codec or _DEFAULT_VIDEO_CODEC).strip()
+    if configured_codec not in _SUPPORTED_VIDEO_CODECS:
+        return _DEFAULT_VIDEO_CODEC
+    return configured_codec
+
+
+def get_video_codec_options() -> list[dict[str, str]]:
+    return [
+        {"value": codec, "label": _VIDEO_CODEC_LABELS[codec]}
+        for codec in _SUPPORTED_VIDEO_CODECS
+    ]
+
+
 def _get_configured_video_codec() -> str:
     """
     读取用户配置的视频编码器。
@@ -142,15 +164,14 @@ def _get_configured_video_codec() -> str:
     编码。这里刻意只允许固定白名单，避免开放任意 FFmpeg 参数后，用户填错
     参数导致输出格式不可控，甚至让生成任务在后续阶段才失败。
     """
-    configured_codec = str(
-        config.app.get("video_codec", _DEFAULT_VIDEO_CODEC) or _DEFAULT_VIDEO_CODEC
-    ).strip()
-    if configured_codec not in _SUPPORTED_VIDEO_CODECS:
+    configured_codec = normalize_configured_video_codec(
+        config.app.get("video_codec", _DEFAULT_VIDEO_CODEC)
+    )
+    if configured_codec != str(config.app.get("video_codec", _DEFAULT_VIDEO_CODEC)).strip():
         logger.warning(
-            f"unsupported video codec configured: {configured_codec}, "
+            f"unsupported video codec configured: {config.app.get('video_codec')}, "
             f"fallback to {_DEFAULT_VIDEO_CODEC}"
         )
-        return _DEFAULT_VIDEO_CODEC
     return configured_codec
 
 

@@ -11,6 +11,7 @@ import {
 import { motion } from 'framer-motion'
 import { Tooltip } from './tooltip'
 import { useSettingsStore } from '../../store/settings-store'
+import { fieldTriggerStyle, inputStyle } from '../../lib/field-styles'
 
 const LLM_PROVIDERS = [
   'openai', 'aihubmix', 'moonshot', 'azure',
@@ -26,14 +27,6 @@ const cardStyle = {
   borderColor: 'border.default',
   borderRadius: 'card',
   shadow: 'sm',
-} as const
-
-const inputStyle = {
-  borderRadius: 'input',
-  borderColor: 'border.default',
-  bg: 'bg.subtle',
-  fontWeight: '500',
-  _focus: { borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' },
 } as const
 
 const fieldLabel = { fontWeight: '700', color: 'text.primary', fontSize: 'sm' } as const
@@ -84,9 +77,9 @@ function SectionCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 18 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.28, ease: 'easeOut' as const, delay }}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: 'easeOut' as const, delay }}
     >
       {inner}
     </motion.div>
@@ -97,7 +90,7 @@ interface SettingsFormProps {
   animate?: boolean
 }
 
-export function SettingsForm({ animate = true }: SettingsFormProps) {
+export function SettingsForm({ animate = false }: SettingsFormProps) {
   const {
     apiBaseUrl, pexelsApiKey, pixabayApiKey, llmProvider, llmApiKey,
     setApiBaseUrl, setPexelsApiKey, setPixabayApiKey, setLlmProvider, setLlmApiKey,
@@ -144,12 +137,7 @@ export function SettingsForm({ animate = true }: SettingsFormProps) {
           >
             <Select.HiddenSelect />
             <Select.Control>
-              <Select.Trigger
-                borderRadius="input"
-                borderColor="border.default"
-                bg="bg.subtle"
-                fontWeight="500"
-              >
+              <Select.Trigger {...fieldTriggerStyle}>
                 <Select.ValueText placeholder="Select a provider…" />
               </Select.Trigger>
               <Select.IndicatorGroup>

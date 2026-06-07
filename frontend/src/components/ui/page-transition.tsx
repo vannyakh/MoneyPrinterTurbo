@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import type { PropsWithChildren } from 'react'
-import { ease, pageVariants } from '../../lib/motion'
+import { pageVariants } from '../../lib/motion'
 
 export function PageTransition({ children }: PropsWithChildren) {
   return (
@@ -9,8 +9,15 @@ export function PageTransition({ children }: PropsWithChildren) {
       initial="initial"
       animate="animate"
       exit="exit"
-      transition={ease}
-      style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}
+      style={{
+        flex: 1,
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        width: '100%',
+        height: '100%',
+        overflow: 'hidden',
+      }}
     >
       {children}
     </motion.div>

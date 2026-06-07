@@ -1,11 +1,22 @@
-import { Card, Field, Heading, HStack, NativeSelect, Stack, Text } from '@chakra-ui/react'
+import { useMemo } from 'react'
+import { Card, Field, Heading, HStack, Stack, Text } from '@chakra-ui/react'
 import { Bot, Languages } from 'lucide-react'
 import { APP_SUBTITLE, APP_TITLE, LOCALES } from '../../constants/app'
 import { useVideoStore } from '../../store/video-store'
+import { MenuSelect } from './menu-select'
 
 export function AppHeader() {
   const locale = useVideoStore((state) => state.locale)
   const setLocale = useVideoStore((state) => state.setLocale)
+
+  const localeOptions = useMemo(
+    () =>
+      Object.entries(LOCALES).map(([code, name]) => ({
+        value: code,
+        label: `${code} - ${name}`,
+      })),
+    [],
+  )
 
   return (
     <Card.Root bg="rgba(15,23,42,0.7)" borderColor="rgba(148,163,184,0.25)">
@@ -25,16 +36,12 @@ export function AppHeader() {
                 <Text>Interface language</Text>
               </HStack>
             </Field.Label>
-            <NativeSelect.Root>
-              <NativeSelect.Field value={locale} onChange={(event) => setLocale(event.target.value)}>
-                {Object.entries(LOCALES).map(([code, name]) => (
-                  <option key={code} value={code}>
-                    {code} - {name}
-                  </option>
-                ))}
-              </NativeSelect.Field>
-              <NativeSelect.Indicator />
-            </NativeSelect.Root>
+            <MenuSelect
+              options={localeOptions}
+              value={locale}
+              onChange={setLocale}
+              placeholder="Select language…"
+            />
           </Field.Root>
         </Stack>
       </Card.Body>

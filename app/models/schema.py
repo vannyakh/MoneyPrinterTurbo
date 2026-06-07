@@ -220,6 +220,80 @@ class VideoSocialMetadataRequest(VideoSocialMetadataParams, BaseModel):
     pass
 
 
+class VoicePreviewRequest(BaseModel):
+    text: str = Field(default="Voice Example", max_length=5000)
+    voice_name: str
+    voice_volume: Optional[float] = 1.0
+    voice_rate: Optional[float] = 1.0
+
+
+class VideoCodecOption(BaseModel):
+    value: str
+    label: str
+
+
+class VideoSettingsData(BaseModel):
+    video_codec: str
+    video_source: str
+    codec_options: List[VideoCodecOption]
+
+
+class VideoSettingsUpdateRequest(BaseModel):
+    video_codec: Optional[str] = None
+    video_source: Optional[str] = None
+
+
+class VideoSettingsResponse(BaseResponse):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": 200,
+                "message": "success",
+                "data": {
+                    "video_codec": "libx264",
+                    "video_source": "pexels",
+                    "codec_options": [
+                        {"value": "libx264", "label": "libx264 (CPU)"},
+                    ],
+                },
+            }
+        }
+
+
+class TtsServersResponse(BaseResponse):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": 200,
+                "message": "success",
+                "data": {
+                    "servers": [
+                        {"id": "azure-tts-v1", "label": "Azure TTS V1"},
+                    ]
+                },
+            }
+        }
+
+
+class TtsVoicesResponse(BaseResponse):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": 200,
+                "message": "success",
+                "data": {
+                    "voices": [
+                        {
+                            "id": "zh-CN-XiaoyiNeural-Female",
+                            "label": "zh-CN-Xiaoyi-Female",
+                        }
+                    ],
+                    "default_voice": "zh-CN-XiaoyiNeural-Female",
+                },
+            }
+        }
+
+
 ######################################################################################################
 ######################################################################################################
 ######################################################################################################
@@ -374,6 +448,19 @@ class VideoMaterialUploadResponse(BaseResponse):
                 "message": "success",
                 "data": {
                     "file": "/MoneyPrinterTurbo/resource/videos/example.mp4",
+                },
+            },
+        }
+
+
+class VideoMaterialDeleteResponse(BaseResponse):
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "status": 200,
+                "message": "success",
+                "data": {
+                    "file": "example.mp4",
                 },
             },
         }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   Box,
   Button,
@@ -6,7 +6,6 @@ import {
   Flex,
   HStack,
   Input,
-  NativeSelect,
   Spinner,
   Stack,
   Text,
@@ -23,22 +22,16 @@ import {
   Video,
 } from 'lucide-react'
 import { Tooltip } from './tooltip'
+import { AudioSettingsSection } from './audio-settings-section'
+import { VideoSettingsSection } from './video-settings-section'
+import { FieldMenuSelect, MenuSelect } from './menu-select'
 import { slideDown } from '../../lib/motion'
-import { API_BASE_URL, LOCALES, SCRIPT_LANGUAGES } from '../../constants/app'
+import { inputStyle, labelStyle } from '../../lib/field-styles'
+import { SCRIPT_LANGUAGES } from '../../constants/app'
 import { useVideoActions } from '../../hooks/use-video-actions'
 import { useVideoStore } from '../../store/video-store'
 
 // ── Shared style tokens ───────────────────────────────────────────────────────
-const inputStyle = {
-  borderRadius: 'input',
-  borderColor:  'border.default',
-  bg:           'bg.subtle',
-  fontWeight:   '500',
-  _focus: { borderColor: 'blue.500', boxShadow: '0 0 0 1px var(--chakra-colors-blue-500)' },
-} as const
-
-const labelStyle = { fontWeight: '700', color: 'text.primary', fontSize: 'sm' } as const
-
 const MotionButton = motion.create(Button)
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -55,14 +48,8 @@ function Toggle({
   label: string
 }) {
   return (
-    <HStack
-      as="button"
-      gap={2.5}
-      onClick={() => onChange(!checked)}
-      cursor="pointer"
-      align="center"
-      type="button"
-    >
+    <HStack asChild gap={2.5} cursor="pointer" align="center">
+      <button type="button" onClick={() => onChange(!checked)}>
       <Box
         w="34px"
         h="20px"
@@ -89,6 +76,7 @@ function Toggle({
       <Text fontSize="sm" fontWeight="600" color="text.primary" userSelect="none">
         {label}
       </Text>
+      </button>
     </HStack>
   )
 }
@@ -107,11 +95,10 @@ function ColorPicker({
     <Field.Root>
       <Field.Label {...labelStyle}>{label}</Field.Label>
       <HStack gap={2} align="center">
-        <Box
-          as="input"
+        <Input
           type="color"
           value={value}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+          onChange={(e) => onChange(e.target.value)}
           w="40px"
           h="36px"
           borderRadius="input"
@@ -159,64 +146,17 @@ function RangeField({
           {value}
         </Text>
       </HStack>
-      <Box
-        as="input"
+      <Input
         type="range"
         min={min}
         max={max}
         step={step}
         value={value}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(Number(e.target.value))}
+        onChange={(e) => onChange(Number(e.target.value))}
         w="full"
         cursor="pointer"
         accentColor="var(--chakra-colors-blue-500)"
       />
-    </Field.Root>
-  )
-}
-
-// ── Option toggle group (radio-style buttons) ─────────────────────────────────
-function OptionGroup<T extends string>({
-  label,
-  options,
-  value,
-  onChange,
-}: {
-  label: string
-  options: { value: T; label: string }[]
-  value: T
-  onChange: (v: T) => void
-}) {
-  return (
-    <Field.Root>
-      <Field.Label {...labelStyle}>{label}</Field.Label>
-      <HStack gap={1.5} flexWrap="wrap">
-        {options.map((o) => {
-          const active = value === o.value
-          return (
-            <Box
-              key={o.value}
-              as="button"
-              type="button"
-              onClick={() => onChange(o.value)}
-              px={3}
-              py="6px"
-              borderRadius="8px"
-              fontSize="xs"
-              fontWeight="700"
-              border="1px solid"
-              borderColor={active ? 'blue.500' : 'border.default'}
-              bg={active ? 'bg.active' : 'bg.subtle'}
-              color={active ? 'blue.500' : 'text.muted'}
-              cursor="pointer"
-              transition="all 0.15s"
-              _hover={!active ? { borderColor: 'border.strong', color: 'text.secondary' } : {}}
-            >
-              {o.label}
-            </Box>
-          )
-        })}
-      </HStack>
     </Field.Root>
   )
 }
@@ -238,17 +178,16 @@ function FormSection({
   return (
     <Box borderBottom="1px solid" borderColor="border.default">
       <HStack
-        as="button"
-        type="button"
+        asChild
         w="full"
         justify="space-between"
         align="center"
         py={3.5}
-        onClick={() => setOpen((v) => !v)}
         cursor="pointer"
         _hover={{ opacity: 0.8 }}
         transition="opacity 0.15s"
       >
+        <button type="button" onClick={() => setOpen((v) => !v)}>
         <HStack gap={2.5}>
           <Box
             w="26px"
@@ -273,6 +212,7 @@ function FormSection({
         >
           <ChevronDown size={14} className="text-slate-400" />
         </motion.div>
+        </button>
       </HStack>
 
       <AnimatePresence initial={false}>
@@ -296,48 +236,6 @@ function FormSection({
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-const VIDEO_SOURCES = [
-  { value: 'pexels',      label: 'Pexels'       },
-  { value: 'pixabay',     label: 'Pixabay'      },
-  { value: 'local',       label: 'Local file'   },
-  { value: 'douyin',      label: 'TikTok'       },
-  { value: 'bilibili',    label: 'Bilibili'     },
-  { value: 'xiaohongshu', label: 'Xiaohongshu'  },
-] as const
-
-const VIDEO_ASPECTS = [
-  { value: '9:16', label: '9:16' },
-  { value: '16:9', label: '16:9' },
-  { value: '1:1',  label: '1:1'  },
-] as const
-
-const CONCAT_MODES = [
-  { value: 'random',     label: 'Random'     },
-  { value: 'sequential', label: 'Sequential' },
-] as const
-
-const TRANSITION_MODES = [
-  { value: '',         label: 'None'     },
-  { value: 'Shuffle',  label: 'Shuffle'  },
-  { value: 'FadeIn',   label: 'Fade In'  },
-  { value: 'FadeOut',  label: 'Fade Out' },
-  { value: 'SlideIn',  label: 'Slide In' },
-  { value: 'SlideOut', label: 'Slide Out'},
-] as const
-
-const CLIP_DURATIONS = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const
-const VIDEO_COUNTS   = [1, 2, 3, 4, 5] as const
-
-const VOICE_VOLUMES = [0.6, 0.8, 1.0, 1.2, 1.5, 2.0, 3.0, 4.0, 5.0] as const
-const VOICE_RATES   = [0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.5, 1.8, 2.0] as const
-const BGM_VOLUMES   = [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0] as const
-
-const BGM_TYPES = [
-  { value: 'random', label: 'Random' },
-  { value: '',       label: 'None'   },
-  { value: 'custom', label: 'Custom' },
-] as const
-
 const SUBTITLE_POSITIONS = [
   { value: 'bottom', label: 'Bottom' },
   { value: 'center', label: 'Center' },
@@ -349,12 +247,8 @@ const SUBTITLE_POSITIONS = [
 export function VideoScriptForm() {
   const store = useVideoStore()
   const {
-    locale, videoSubject, videoScript, videoTerms,
+    videoSubject, videoScript, videoTerms,
     videoLanguage, paragraphNumber, videoScriptPrompt, customSystemPrompt,
-    videoSource, videoAspect, videoConcatMode, videoTransitionMode,
-    videoClipDuration, videoCount,
-    voiceName, voiceVolume, voiceRate,
-    bgmType, bgmFile, bgmVolume,
     subtitleEnabled, subtitlePosition, customPosition,
     fontName, textForeColor, fontSize, strokeColor, strokeWidth,
     subtitleBgEnabled, textBgColor, roundedSubtitleBg,
@@ -371,6 +265,17 @@ export function VideoScriptForm() {
     toErrorText(generateScriptMutation.error) ||
     toErrorText(generateTermsMutation.error) ||
     toErrorText(createVideoMutation.error)
+
+  const scriptLanguageOptions = useMemo(
+    () =>
+      SCRIPT_LANGUAGES.map((code) => ({
+        value: code,
+        label: code || 'Auto Detect',
+      })),
+    [],
+  )
+
+  const subtitlePositionOptions = useMemo(() => [...SUBTITLE_POSITIONS], [])
 
   return (
     <Flex direction="column" flex={1} minH={0} h="full">
@@ -392,23 +297,17 @@ export function VideoScriptForm() {
 
             {/* Language + Paragraphs + Generate Script */}
             <HStack align="end" gap={3} flexWrap="wrap">
-              <Field.Root maxW="200px">
-                <Field.Label {...labelStyle}>Language</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    {...inputStyle}
+              <Box maxW="220px" flex={1} minW="180px">
+                <Field.Root>
+                  <Field.Label {...labelStyle}>Language</Field.Label>
+                  <MenuSelect
+                    options={scriptLanguageOptions}
                     value={videoLanguage}
-                    onChange={(e) => setVideoLanguage(e.target.value)}
-                  >
-                    {SCRIPT_LANGUAGES.map((code) => (
-                      <option key={code || 'auto'} value={code}>
-                        {code || 'Auto Detect'}
-                      </option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
+                    onChange={setVideoLanguage}
+                    placeholder="Auto Detect"
+                  />
+                </Field.Root>
+              </Box>
 
               <Field.Root maxW="110px">
                 <Field.Label {...labelStyle}>Paragraphs</Field.Label>
@@ -445,16 +344,15 @@ export function VideoScriptForm() {
 
             {/* Advanced script options */}
             <Box>
-              <Box
-                as="button"
-                type="button"
-                onClick={() => setShowAdvancedScript((v) => !v)}
-                display="flex"
-                alignItems="center"
-                gap={1.5}
-                cursor="pointer"
-                mb={showAdvancedScript ? 3 : 0}
-              >
+            <Box
+              asChild
+              display="flex"
+              alignItems="center"
+              gap={1.5}
+              cursor="pointer"
+              mb={showAdvancedScript ? 3 : 0}
+            >
+              <button type="button" onClick={() => setShowAdvancedScript((v) => !v)}>
                 <motion.div
                   animate={{ rotate: showAdvancedScript ? 180 : 0 }}
                   transition={{ duration: 0.2 }}
@@ -465,7 +363,8 @@ export function VideoScriptForm() {
                 <Text fontSize="xs" fontWeight="600" color="text.muted">
                   Advanced script options
                 </Text>
-              </Box>
+              </button>
+            </Box>
 
               <AnimatePresence initial={false}>
                 {showAdvancedScript && (
@@ -589,174 +488,12 @@ export function VideoScriptForm() {
 
           {/* ════ VIDEO SETTINGS ════════════════════════════════ */}
           <FormSection title="Video Settings" icon={Film}>
-            <Field.Root>
-              <Field.Label {...labelStyle}>Video source</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  {...inputStyle}
-                  value={videoSource}
-                  onChange={(e) => update({ videoSource: e.target.value })}
-                >
-                  {VIDEO_SOURCES.map((s) => (
-                    <option key={s.value} value={s.value}>{s.label}</option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-
-            <OptionGroup
-              label="Aspect ratio"
-              options={VIDEO_ASPECTS}
-              value={videoAspect as typeof VIDEO_ASPECTS[number]['value']}
-              onChange={(v) => update({ videoAspect: v })}
-            />
-
-            <OptionGroup
-              label="Clip order"
-              options={CONCAT_MODES}
-              value={videoConcatMode as typeof CONCAT_MODES[number]['value']}
-              onChange={(v) => update({ videoConcatMode: v })}
-            />
-
-            <Field.Root>
-              <Field.Label {...labelStyle}>Transition</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  {...inputStyle}
-                  value={videoTransitionMode}
-                  onChange={(e) => update({ videoTransitionMode: e.target.value })}
-                >
-                  {TRANSITION_MODES.map((t) => (
-                    <option key={t.value} value={t.value}>{t.label}</option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
-
-            <HStack gap={3}>
-              <Field.Root flex={1}>
-                <Field.Label {...labelStyle}>Clip duration</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    {...inputStyle}
-                    value={videoClipDuration}
-                    onChange={(e) => update({ videoClipDuration: Number(e.target.value) })}
-                  >
-                    {CLIP_DURATIONS.map((d) => (
-                      <option key={d} value={d}>{d}s</option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
-
-              <Field.Root flex={1}>
-                <Field.Label {...labelStyle}>Videos to generate</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    {...inputStyle}
-                    value={videoCount}
-                    onChange={(e) => update({ videoCount: Number(e.target.value) })}
-                  >
-                    {VIDEO_COUNTS.map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
-            </HStack>
+            <VideoSettingsSection labelStyle={labelStyle} />
           </FormSection>
 
-          {/* ════ AUDIO ══════════════════════════════════════════ */}
-          <FormSection title="Audio" icon={Mic}>
-            <Field.Root>
-              <Field.Label {...labelStyle}>Voice name</Field.Label>
-              <Input
-                {...inputStyle}
-                value={voiceName}
-                onChange={(e) => update({ voiceName: e.target.value })}
-                placeholder="e.g. en-US-JennyNeural-Female"
-                fontFamily="mono"
-                fontSize="xs"
-              />
-              <Field.HelperText fontSize="xs" color="text.muted">
-                Leave blank for server default. Format: locale-Name-Gender
-              </Field.HelperText>
-            </Field.Root>
-
-            <HStack gap={3}>
-              <Field.Root flex={1}>
-                <Field.Label {...labelStyle}>Voice volume</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    {...inputStyle}
-                    value={voiceVolume}
-                    onChange={(e) => update({ voiceVolume: Number(e.target.value) })}
-                  >
-                    {VOICE_VOLUMES.map((v) => (
-                      <option key={v} value={v}>{v}</option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
-
-              <Field.Root flex={1}>
-                <Field.Label {...labelStyle}>Voice rate</Field.Label>
-                <NativeSelect.Root>
-                  <NativeSelect.Field
-                    {...inputStyle}
-                    value={voiceRate}
-                    onChange={(e) => update({ voiceRate: Number(e.target.value) })}
-                  >
-                    {VOICE_RATES.map((r) => (
-                      <option key={r} value={r}>{r}×</option>
-                    ))}
-                  </NativeSelect.Field>
-                  <NativeSelect.Indicator />
-                </NativeSelect.Root>
-              </Field.Root>
-            </HStack>
-
-            <OptionGroup
-              label="Background music"
-              options={BGM_TYPES}
-              value={bgmType as typeof BGM_TYPES[number]['value']}
-              onChange={(v) => update({ bgmType: v })}
-            />
-
-            {bgmType === 'custom' && (
-              <Field.Root>
-                <Field.Label {...labelStyle}>BGM filename</Field.Label>
-                <Input
-                  {...inputStyle}
-                  value={bgmFile}
-                  onChange={(e) => update({ bgmFile: e.target.value })}
-                  placeholder="output013.mp3"
-                  fontFamily="mono"
-                  fontSize="xs"
-                />
-              </Field.Root>
-            )}
-
-            <Field.Root>
-              <Field.Label {...labelStyle}>BGM volume</Field.Label>
-              <NativeSelect.Root>
-                <NativeSelect.Field
-                  {...inputStyle}
-                  value={bgmVolume}
-                  onChange={(e) => update({ bgmVolume: Number(e.target.value) })}
-                >
-                  {BGM_VOLUMES.map((v) => (
-                    <option key={v} value={v}>{v}</option>
-                  ))}
-                </NativeSelect.Field>
-                <NativeSelect.Indicator />
-              </NativeSelect.Root>
-            </Field.Root>
+          {/* ════ AUDIO SETTINGS ═════════════════════════════════ */}
+          <FormSection title="Audio Settings" icon={Mic}>
+            <AudioSettingsSection labelStyle={labelStyle} />
           </FormSection>
 
           {/* ════ SUBTITLE ═══════════════════════════════════════ */}
@@ -769,10 +506,11 @@ export function VideoScriptForm() {
 
             {subtitleEnabled && (
               <Stack gap={4}>
-                <OptionGroup
+                <FieldMenuSelect
                   label="Position"
-                  options={SUBTITLE_POSITIONS}
-                  value={subtitlePosition as typeof SUBTITLE_POSITIONS[number]['value']}
+                  labelStyle={labelStyle}
+                  options={subtitlePositionOptions}
+                  value={subtitlePosition}
                   onChange={(v) => update({ subtitlePosition: v })}
                 />
 
@@ -868,7 +606,7 @@ export function VideoScriptForm() {
         borderColor="border.default"
         bg="bg.canvas"
       >
-        <HStack justify="space-between" align="center">
+        <HStack justify="flex-end" align="center">
           <MotionButton
             colorPalette="purple"
             borderRadius="btn"
@@ -883,10 +621,6 @@ export function VideoScriptForm() {
             {createVideoMutation.isPending ? <Spinner size="xs" /> : <Video size={16} />}
             Generate video
           </MotionButton>
-
-          <Text fontSize="xs" fontWeight="500" color="text.muted">
-            {LOCALES[locale] ?? 'English'} · {API_BASE_URL}
-          </Text>
         </HStack>
       </Box>
     </Flex>

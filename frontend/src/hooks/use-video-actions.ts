@@ -10,7 +10,7 @@ export function useVideoActions() {
     paragraphNumber, videoScriptPrompt, customSystemPrompt,
     // video
     videoSource, videoAspect, videoConcatMode, videoTransitionMode,
-    videoClipDuration, videoCount,
+    videoClipDuration, videoCount, videoMaterials,
     // audio
     voiceName, voiceVolume, voiceRate,
     bgmType, bgmFile, bgmVolume,
@@ -64,6 +64,9 @@ export function useVideoActions() {
         video_transition_mode: videoTransitionMode || null,
         video_clip_duration:   videoClipDuration,
         video_count:           videoCount,
+        ...(videoSource === 'local' && videoMaterials.length > 0
+          ? { video_materials: videoMaterials }
+          : {}),
         // Audio
         voice_name:   voiceName,
         voice_volume: voiceVolume,
