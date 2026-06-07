@@ -113,6 +113,7 @@ support_locales = [
     "de-DE",
     "en-US",
     "fr-FR",
+    "km-KH",
     "ru-RU",
     "vi-VN",
     "th-TH",
